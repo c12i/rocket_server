@@ -10,3 +10,10 @@ edition = "2018"
 rocket = "0.4.2"
 failure = "0.1.5"
 failure_derive ="0.1.5"
+diesel = {version="1.4.2", features=["postgres"]}
+diesel_database_recipes = { path = "../diesel_database_recipes" }
+
+[dependencies.rocket_contrib]
+version = "0.4.2"
+default-features = false
+features = ["diesel_postgres_pool"]

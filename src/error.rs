@@ -8,11 +8,23 @@ use std::io::Cursor;
 pub enum WebError {
     #[fail(display = "Could not find {}", 0)]
     IOError(std::io::Error),
+    #[fail(display = "Database error: {}", 0)]
+    DatabaseError(diesel::result::Error),
+    #[fail(display = "User not found")]
+    UserNotFound,
+    #[fail(display = "Invalid credentials")]
+    InvalidCredentials,
 }
 
 impl From<std::io::Error> for WebError {
     fn from(e: std::io::Error) -> Self {
         WebError::IOError(e)
+    }
+}
+
+impl From<diesel::result::Error> for WebError {
+    fn from(e: diesel::result::Error) -> Self {
+        WebError::DatabaseError(e)
     }
 }
 
