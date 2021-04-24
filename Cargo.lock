@@ -1210,6 +1210,7 @@ dependencies = [
  "diesel_database_recipes",
  "failure",
  "failure_derive",
+ "rand 0.8.3",
  "rocket",
  "rocket_contrib",
 ]

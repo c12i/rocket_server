@@ -1,14 +1,18 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
 mod error;
+mod session;
 
 use crate::error::WebError;
+use crate::session::Session;
 use diesel::prelude::*;
 use diesel_patches::models::User;
 use diesel_patches::schema::users;
 use rocket::{
+    http::{Cookie, Cookies},
     request::Form,
     response::{NamedFile, Responder},
+    State,
 };
 use std::path::PathBuf;
 
@@ -35,7 +39,12 @@ pub struct LoginDto {
 }
 
 #[post("/login", data = "<dt>")]
-fn login(dt: Form<LoginDto>, db: DPool) -> Result<impl Responder<'static>, WebError> {
+fn login(
+    dt: Form<LoginDto>,
+    db: DPool,
+    state: State<Session>,
+    mut cookie: Cookies,
+) -> Result<impl Responder<'static>, WebError> {
     let ld_form = dt.into_inner();
     let vals =
         users::table::filter(users::table, users::name.eq(ld_form.name)).load::<User>(&db.0)?;
@@ -45,6 +54,9 @@ fn login(dt: Form<LoginDto>, db: DPool) -> Result<impl Responder<'static>, WebEr
     if !user.verify_password(&ld_form.pass) {
         return Err(WebError::InvalidCredentials);
     }
+
+    let session_id = state.put(user.clone());
+    cookie.add(Cookie::new("login", session_id.to_string()));
 
     Ok("Password passed")
 }
@@ -59,8 +71,11 @@ fn static_files(path: PathBuf) -> Result<impl Responder<'static>, WebError> {
 pub struct DPool(diesel::pg::PgConnection);
 
 fn main() {
+    let sesh = Session::new();
+
     rocket::ignite()
         .mount("/", routes![healthz, root, login, static_files])
         .attach(DPool::fairing())
+        .manage(sesh)
         .launch();
 }
