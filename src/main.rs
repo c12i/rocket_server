@@ -8,6 +8,7 @@ use crate::session::Session;
 use diesel::prelude::*;
 use diesel_patches::models::User;
 use diesel_patches::schema::users;
+use maud::{html, DOCTYPE};
 use rocket::{
     http::{Cookie, Cookies},
     request::Form,
@@ -58,7 +59,23 @@ fn login(
     let session_id = state.put(user.clone());
     cookie.add(Cookie::new("login", session_id.to_string()));
 
-    Ok("Password passed")
+    Ok(html! {
+        (DOCTYPE)
+        head {
+            meta charset = "utf-8";
+        }
+        body {
+            h1 {"Welcome " (user.name)}
+            h2 {"Ask a question"}
+            div style = "border:1px solid black;" {
+                form action = "question" method = "POST" {
+                    "Question" input type = "text" name = "question";
+                    "Options" input type = "text" name = "options";
+                    input type = "submit" value = "Ask a question";
+                }
+            }
+        }
+    })
 }
 
 #[get("/<path..>")]
