@@ -6,8 +6,8 @@ mod session;
 use crate::error::WebError;
 use crate::session::Session;
 use diesel::prelude::*;
-use diesel_patches::models::User;
-use diesel_patches::schema::users;
+use diesel_patches::models::{NewPoll, Poll, User};
+use diesel_patches::schema::{polls, users};
 use maud::{html, DOCTYPE};
 use rocket::{
     http::{Cookie, Cookies},
@@ -44,7 +44,7 @@ fn login(
     dt: Form<LoginDto>,
     db: DPool,
     state: State<Session>,
-    mut cookie: Cookies,
+    mut cookies: Cookies,
 ) -> Result<impl Responder<'static>, WebError> {
     let ld_form = dt.into_inner();
     let vals =
@@ -57,7 +57,7 @@ fn login(
     }
 
     let session_id = state.put(user.clone());
-    cookie.add(Cookie::new("login", session_id.to_string()));
+    cookies.add(Cookie::new("login", session_id.to_string()));
 
     Ok(html! {
         (DOCTYPE)
@@ -78,6 +78,42 @@ fn login(
     })
 }
 
+#[derive(Debug, FromForm)]
+pub struct QuestionDto {
+    question: String,
+    options: String,
+}
+
+#[post("/question", data = "<dt>")]
+pub fn ask_question(
+    dt: Form<QuestionDto>,
+    db: DPool,
+    state: State<Session>,
+    cookies: Cookies,
+) -> Result<impl Responder<'static>, WebError> {
+    let login = cookies.get("login").ok_or(WebError::NoCookie)?.value();
+    let user = state
+        .get(login.parse().map_err(|_| WebError::InvalidSession)?)
+        .ok_or(WebError::UserNotFound)?;
+
+    let poll = NewPoll::new(&dt.question, &dt.options, Some(user.id));
+
+    let added_poll = diesel::insert_into(polls::table)
+        .values(&poll)
+        .get_result::<Poll>(&db.0)?;
+    Ok(html! {
+        (DOCTYPE)
+        head {
+            meta charset = "utf-8";
+        }
+        body {
+            h1 {"Interesting question " (user.name)}
+            (added_poll.question) "??" br;
+            (added_poll.options)
+        }
+    })
+}
+
 #[get("/<path..>")]
 fn static_files(path: PathBuf) -> Result<impl Responder<'static>, WebError> {
     let path = PathBuf::from("site/static").join(path);
@@ -91,7 +127,10 @@ fn main() {
     let sesh = Session::new();
 
     rocket::ignite()
-        .mount("/", routes![healthz, root, login, static_files])
+        .mount(
+            "/",
+            routes![healthz, root, login, ask_question, static_files],
+        )
         .attach(DPool::fairing())
         .manage(sesh)
         .launch();

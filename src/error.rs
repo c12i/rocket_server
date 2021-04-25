@@ -14,6 +14,10 @@ pub enum WebError {
     UserNotFound,
     #[fail(display = "Invalid credentials")]
     InvalidCredentials,
+    #[fail(display = "NoCookie")]
+    NoCookie,
+    #[fail(display = "InvalidSession")]
+    InvalidSession,
 }
 
 impl From<std::io::Error> for WebError {
