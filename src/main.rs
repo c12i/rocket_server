@@ -63,6 +63,7 @@ fn login(
         (DOCTYPE)
         head {
             meta charset = "utf-8";
+            link rel = "stylesheet" href = "main.css";
         }
         body {
             h1 {"Welcome " (user.name)}
@@ -105,6 +106,7 @@ pub fn ask_question(
         (DOCTYPE)
         head {
             meta charset = "utf-8";
+            link rel = "stylesheet" href = "main.css";
         }
         body {
             h1 {"Interesting question " (user.name)}
